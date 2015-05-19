@@ -61,4 +61,33 @@ sys_exit(int status)
     loop: goto loop; // Convince GCC that function truly does not return.
 }
 
+
+
+static inline void sys_set_priority(int priority){
+	asm volatile("int %0 \n"
+		:
+		: "i"(INT_SYS_USER1),	//set INT_SYS_USER1 to %0
+		  "a" (priority)		//set to the eax register
+		: "cc", "memory");
+}
+
+static inline void sys_set_share(int share){
+	asm volatile("int %0 \n"
+		:
+		: "i" (INT_SYS_USER2),
+		  "a" (share)
+		: "cc", "memory");
+}
+
+static inline void sys_print(int c){
+	asm volatile("int %0 \n"
+		:
+		: "i" (INT_SYS_USER3),
+		  "a" (c)
+		: "cc", "memory");
+}
+
+
+
+
 #endif

@@ -1,6 +1,7 @@
 #include "schedos-kern.h"
 #include "x86.h"
 #include "lib.h"
+#include "x86sync.h"
 
 /*****************************************************************************
  * schedos-kern
@@ -65,7 +66,7 @@ start(void)
 
 	// Set up hardware (schedos-x86.c)
 	segments_init();
-	interrupt_controller_init(0);
+	interrupt_controller_init(1);
 	console_clear();
 
 	// Initialize process descriptors as empty
@@ -83,6 +84,11 @@ start(void)
 		// Initialize the process descriptor
 		special_registers_init(proc);
 
+		// Initialize the extra process descriptors
+	    proc->p_share = 1;
+		proc->p_time_passed = 0;
+		proc->p_priority = 1;
+
 		// Set ESP
 		proc->p_registers.reg_esp = stack_ptr;
 
@@ -91,6 +97,8 @@ start(void)
 
 		// Mark the process as runnable!
 		proc->p_state = P_RUNNABLE;
+
+		lock = 0;
 	}
 
 	// Initialize the cursor-position shared variable to point to the
@@ -151,11 +159,17 @@ interrupt(registers_t *reg)
 		// 'sys_user*' are provided for your convenience, in case you
 		// want to add a system call.
 		/* Your code here (if you want). */
+		current->p_priority = reg->reg_eax;
 		run(current);
 
 	case INT_SYS_USER2:
-		/* Your code here (if you want). */
+		current->p_share = reg->reg_eax;
 		run(current);
+
+	case INT_SYS_USER3:
+		*cursorpos++ = reg->reg_eax;
+		run(current);
+
 
 	case INT_CLOCK:
 		// A clock interrupt occurred (so an application exhausted its
@@ -189,9 +203,10 @@ void
 schedule(void)
 {
 	pid_t pid = current->p_pid;
+	int lowest_priority = 0x7fffffff; //INT_MAX
 
-	if (scheduling_algorithm == 0)
-		while (1) {
+	if (scheduling_algorithm == 0){
+		while(1){
 			pid = (pid + 1) % NPROCS;
 
 			// Run the selected process, but skip
@@ -200,7 +215,43 @@ schedule(void)
 			if (proc_array[pid].p_state == P_RUNNABLE)
 				run(&proc_array[pid]);
 		}
-
+	}
+	else if (scheduling_algorithm == 1){
+		while(1){
+			if (proc_array[pid].p_state != P_RUNNABLE)
+				pid++;
+			run(&proc_array[pid]);
+		}
+	}
+	else if (scheduling_algorithm == 2){
+		while(1){
+			int i;
+			for (i = 0; i < NPROCS; i++)
+			{
+				if(proc_array[i].p_priority < lowest_priority 
+						&& proc_array[i].p_state == P_RUNNABLE)
+					lowest_priority = proc_array[i].p_priority;
+			}
+			pid = (pid+1)%NPROCS;
+			if(proc_array[pid].p_priority == lowest_priority &&
+					proc_array[pid].p_state == P_RUNNABLE)
+				run(&proc_array[pid]);
+		}
+	}
+	else if (scheduling_algorithm == 3){
+		while(1){
+			if(proc_array[pid].p_state == P_RUNNABLE){
+				if (proc_array[pid].p_time_passed >= proc_array[pid].p_share){
+					proc_array[pid].p_time_passed = 0;
+				}
+				else{
+					proc_array[pid].p_time_passed++;
+					run(&proc_array[pid]);	
+				}				
+			}
+			pid = (pid+1)%NPROCS;
+		}
+	}
 	// If we get here, we are running an unknown scheduling algorithm.
 	cursorpos = console_printf(cursorpos, 0x100, "\nUnknown scheduling algorithm %d\n", scheduling_algorithm);
 	while (1)

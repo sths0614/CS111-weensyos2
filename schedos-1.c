@@ -18,18 +18,42 @@
 #define PRINTCHAR	('1' | 0x0C00)
 #endif
 
+#ifndef PRIORITY
+#define PRIORITY 5
+#endif
+
+#ifndef SHARE
+#define SHARE 1
+#endif
+
+#ifndef SYNC_METHOD
+#define SYNC_METHOD 2
+#endif
+
 void
 start(void)
 {
-	int i;
+	sys_set_priority(PRIORITY);
+	sys_set_share(SHARE);
 
+	int i;
 	for (i = 0; i < RUNCOUNT; i++) {
-		// Write characters to the console, yielding after each one.
-		*cursorpos++ = PRINTCHAR;
-		sys_yield();
+
+		if(SYNC_METHOD == 1){
+			// Write characters to the console, yielding after each one.
+			// *cursorpos++ = PRINTCHAR;
+			// sys_yield();
+			while(atomic_swap(&lock, 1) != 0){ //will only return 0 when the lock is free
+				continue;
+			}
+			*cursorpos++ = PRINTCHAR;
+			atomic_swap(&lock, 0);
+			sys_yield();
+		}
+		else if (SYNC_METHOD == 2){
+			sys_print(PRINTCHAR);
+		}
 	}
 
-	// Yield forever.
-	while (1)
-		sys_yield();
+	sys_exit(0);
 }
