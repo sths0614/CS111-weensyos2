@@ -87,6 +87,12 @@ static inline void sys_print(int c){
 		: "cc", "memory");
 }
 
+static inline void sys_get_ticket(){
+	asm volatile("int %0 \n"
+		:
+		: "i" (INT_SYS_USER4)
+		: "cc", "memory");
+}
 
 
 

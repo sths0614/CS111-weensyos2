@@ -3,6 +3,7 @@
 #include "lib.h"
 #include "x86sync.h"
 
+
 /*****************************************************************************
  * schedos-kern
  *
@@ -50,6 +51,19 @@ process_t *current;
 // The preferred scheduling algorithm.
 int scheduling_algorithm;
 
+#define MAX_TICKETS 200
+static int num_tickets;
+static pid_t tickets[MAX_TICKETS];
+
+pid_t get_winner(){
+
+	int i = Random()*10000;
+	//int i = get_random_bytes(&i, sizeof(int));
+	int winner = i%num_tickets;
+	return tickets[winner];
+}
+
+
 
 /*****************************************************************************
  * start
@@ -63,10 +77,11 @@ void
 start(void)
 {
 	int i;
+	num_tickets = 0;
 
 	// Set up hardware (schedos-x86.c)
 	segments_init();
-	interrupt_controller_init(1);
+	interrupt_controller_init(0);
 	console_clear();
 
 	// Initialize process descriptors as empty
@@ -99,6 +114,8 @@ start(void)
 		proc->p_state = P_RUNNABLE;
 
 		lock = 0;
+
+		
 	}
 
 	// Initialize the cursor-position shared variable to point to the
@@ -108,8 +125,13 @@ start(void)
 	// Initialize the scheduling algorithm.
 	scheduling_algorithm = 0;
 
+	PlantSeeds(1);
+
 	// Switch to the first process.
 	run(&proc_array[1]);
+
+
+	
 
 	// Should never get here!
 	while (1)
@@ -168,6 +190,13 @@ interrupt(registers_t *reg)
 
 	case INT_SYS_USER3:
 		*cursorpos++ = reg->reg_eax;
+		run(current);
+
+	case INT_SYS_USER4:
+		if(num_tickets < MAX_TICKETS){
+			tickets[num_tickets]=current->p_pid;
+			num_tickets++;
+		}
 		run(current);
 
 
@@ -252,6 +281,28 @@ schedule(void)
 			pid = (pid+1)%NPROCS;
 		}
 	}
+	else if (scheduling_algorithm == 4){
+		pid_t winner;
+		if(num_tickets < NPROCS-1){
+			while (1) {
+				pid = (pid + 1) % NPROCS;
+				// Run the selected process, but skip
+				// non-runnable processes.
+				// Note that the 'run' function does not return.
+				if (proc_array[pid].p_state == P_RUNNABLE)
+					run(&proc_array[pid]);
+			}
+		}
+		else{
+			winner = get_winner();
+			while(proc_array[winner].p_state != P_RUNNABLE){
+				winner = get_winner();
+			}
+		}
+		run(&proc_array[winner]);
+	}
+
+
 	// If we get here, we are running an unknown scheduling algorithm.
 	cursorpos = console_printf(cursorpos, 0x100, "\nUnknown scheduling algorithm %d\n", scheduling_algorithm);
 	while (1)

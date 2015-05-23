@@ -1,5 +1,5 @@
-Name:
-UCLA ID:
+Name: Stanley (Ching) Hsu
+UCLA ID: 704338787
 
 Collaborators:
 
@@ -45,7 +45,18 @@ Average wait time for scheduling_algorithm 1:
 Exercise 4:
 
 Did you complete Exercise 4A, Exercise 4B, or both for extra credit?
-	both
+	I completed both for extra credit.
+	Exercise 4a: 
+		line 36 in schedos-1.c
+		line 66-72 in schedos-app.h
+		line 33 in schedos-kern.h
+		line 184-185, 255-269 in schedos-kern.c
+
+	Exercise 4b: 
+		line 37 in schedos-1.c
+		line 74-80 in schedos-app.h
+		line 34 in schedos-kern.h
+		line 187-189, 270-283 in schedos-kern.c
 
 
 Exercise 5:
@@ -61,7 +72,24 @@ Anything else you'd like us to know:
 
 
 Extra credit exercises:
+Exercise 7:
+	line 259-424 in lib.c
+	line 62-80 in lib.h
+	line 191-196, 80, 128 in schedos-kern.c
+	line 38 in schedos-1.c 
+
+	Using Steve Park's implementation of random number generator in the files lib.c and lib.h, implemented a new system call (sys_get_ticket) that
+	adds its own pid to the tickets[] array. The array indexes are the ticket numbers. When schedule() is called after each printing, a random ticket number called winner
+	is generated and the process that matches tickets[winner] is run.
+	When the scheduling_algorithm is set to 4, this lottery scheduling algorithm is used.
+
+
 Exercise 8:
-	Done by implementing a new system call that atomically prints a character to the console.
+	line 54-56 in schedos-1.c
+	line 187-189 in schedos-kern.c
+	line 82-88 in schedos-app.h
+	line 19 in schedos.h
+
+	Done by implementing a new system call (sys_print) that atomically prints a character to the console using the interrupt code INT_SYS_USER3
 	When the macro SYNC_METHOD is set to 2, this synchronization mechanism is used.
 	When it is set to 1, the original one is used. 

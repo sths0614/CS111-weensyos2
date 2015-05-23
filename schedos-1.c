@@ -27,7 +27,7 @@
 #endif
 
 #ifndef SYNC_METHOD
-#define SYNC_METHOD 2
+#define SYNC_METHOD 1
 #endif
 
 void
@@ -35,6 +35,7 @@ start(void)
 {
 	sys_set_priority(PRIORITY);
 	sys_set_share(SHARE);
+	sys_get_ticket();
 
 	int i;
 	for (i = 0; i < RUNCOUNT; i++) {
